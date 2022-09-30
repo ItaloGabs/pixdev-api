@@ -106,7 +106,7 @@ class Payload{
     * @param
     */
     private function getValueCodPix($id,$value){
-        $size = str_pad(strlen($value),2,'0',STR_PAD_LEFT);
+        $size = str_pad(mb_strlen($value),2,'0',STR_PAD_LEFT);
         return $id.$size.$value;
     }
 
