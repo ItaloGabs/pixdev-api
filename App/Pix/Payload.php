@@ -8,6 +8,8 @@ namespace App\Pix;
 * Cidade do titular da conta: $merchantCity
 * Id da transação pix: $txid
 * Valor do pix: $amount
+* Define se o pagamento deve ser feito apenas uma vez: $unicopagamento
+* URL payload dinamico: $url
 *
 * @var string
 */
@@ -22,16 +24,20 @@ class Payload{
     private $merchantCity;
     private $txid;
     private $amount;
+    private $unicopagamento = false;
+    private $url;
 
     /**
      * IDs do Payload do Pix(Fixos)
     * @var string
     */
     const ID_PAYLOAD_FORMAT_INDICATOR                  = '00';
+    const ID_POINT_OF_INITIATION_METHOD                = '01';
     const ID_MERCHANT_ACCOUNT_INFORMATION              = '26';
     const ID_MERCHANT_ACCOUNT_INFORMATION_GUI          = '00';
     const ID_MERCHANT_ACCOUNT_INFORMATION_KEY          = '01';
     const ID_MERCHANT_ACCOUNT_INFORMATION_DESCRIPTION  = '02';
+    const ID_MERCHANT_ACCOUNT_INFORMATION_URL          = '25';
     const ID_MERCHANT_CATEGORY_CODE                    = '52';
     const ID_TRANSACTION_CURRENCY                      = '53';
     const ID_TRANSACTION_AMOUNT                        = '54';
@@ -58,6 +64,24 @@ class Payload{
     */
     public function setDescription($description){
         $this->description = $description;
+        return $this;
+    }
+
+    /**
+     * Método responsável por definir o valor de $url
+    * @param string $description
+    */
+    public function setUrl($url){
+        $this->url = $url;
+        return $this;
+    }
+
+    /**
+     * Método responsável por definir o valor de $unicopagamento
+    * @param bool $description
+    */
+    public function setUnicoPagamento($unicopagamento){
+        $this->unicopagamento = $unicopagamento;
         return $this;
     }
 
@@ -97,6 +121,8 @@ class Payload{
         return $this;
     }
 
+    
+
 
 #########################################################################################################
 
@@ -119,14 +145,18 @@ class Payload{
         $identificadorBank = $this->getValueCodPix(self::ID_MERCHANT_ACCOUNT_INFORMATION_GUI,'br.gov.bcb.pix');
 
         //chave pix
-        $key = $this->getValueCodPix(self::ID_MERCHANT_ACCOUNT_INFORMATION_KEY,$this->pixKey);
+        $key = (strlen($this->pixKey)) ? $this->getValueCodPix(self::ID_MERCHANT_ACCOUNT_INFORMATION_KEY,$this->pixKey) : '';
 
         //descrição do pagamento
         //ternario if
         $description = (strlen($this->description)) ? $this->getValueCodPix(self::ID_MERCHANT_ACCOUNT_INFORMATION_DESCRIPTION,$this->description) : '';
 
+        //URl do qrcode dinamico
+        //ternario if
+        $url = (strlen($this->url)) ? $this->getValueCodPix(self::ID_MERCHANT_ACCOUNT_INFORMATION_URL,preg_replace('/^https?\:\/\//','',$this->url)) : '';
+
         // Retorna o valor completo da conta
-        return $this->getValueCodPix(self::ID_MERCHANT_ACCOUNT_INFORMATION,$identificadorBank.$key.$description);
+        return $this->getValueCodPix(self::ID_MERCHANT_ACCOUNT_INFORMATION,$identificadorBank.$key.$description.$url);
     }
 
     /**
@@ -140,6 +170,9 @@ class Payload{
         return $this->getValueCodPix(self::ID_ADDITIONAL_DATA_FIELD_TEMPLATE,$txid);
     }
 
+    private function getUnicoPagamento(){
+        return $this->unicopagamento ? $this->getValueCodPix(self::ID_POINT_OF_INITIATION_METHOD,'12') : '';
+    }
 
 #######################################################################################################################
 
@@ -152,6 +185,7 @@ class Payload{
     public function getPayload(){
         //Cria o payload
         $payload = $this->getValueCodPix(self::ID_PAYLOAD_FORMAT_INDICATOR,'01').
+                   $this->getUnicoPagamento().
                    $this->getMerchantAccountInformation().
                    $this->getValueCodPix(self::ID_MERCHANT_CATEGORY_CODE,'0000').
                    $this->getValueCodPix(self::ID_TRANSACTION_CURRENCY,'986').
